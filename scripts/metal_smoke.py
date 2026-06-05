@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 import argparse
+import ast
+import configparser
+import glob
 import math
 import os
 import sys
 import tempfile
+from collections import defaultdict
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -45,15 +49,56 @@ def finite_metrics(metrics):
     return bad
 
 
-def load_args(env_name):
-    old_argv = sys.argv[:]
+def parse_value(value):
     try:
-        sys.argv = [old_argv[0]]
-        from pufferlib import pufferl
+        return ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        return value
 
-        return pufferl.load_config(env_name), pufferl
-    finally:
-        sys.argv = old_argv
+
+def load_config(env_name):
+    default_path = os.path.join(ROOT, "config", "default.ini")
+    config_paths = glob.glob(os.path.join(ROOT, "config", "**", "*.ini"), recursive=True)
+
+    if env_name == "default":
+        parser = configparser.ConfigParser()
+        parser.read(default_path)
+    else:
+        parser = None
+        for path in config_paths:
+            candidate = configparser.ConfigParser()
+            candidate.read([default_path, path])
+            if env_name in candidate["base"]["env_name"].split():
+                parser = candidate
+                break
+        if parser is None:
+            raise ValueError(f"No config for env_name {env_name}")
+
+    args = defaultdict(dict)
+    for section in parser.sections():
+        for key, raw_value in parser[section].items():
+            value = parse_value(raw_value)
+            if section == "base":
+                args[key] = value
+            else:
+                args[section][key] = value
+
+    args["env_name"] = env_name
+    for section in parser.sections():
+        args.setdefault(section, {})
+    return dict(args)
+
+
+def validate_config(args):
+    minibatch_size = args["train"]["minibatch_size"]
+    horizon = args["train"]["horizon"]
+    total_agents = args["vec"]["total_agents"]
+    if minibatch_size % horizon != 0:
+        raise ValueError(f"minibatch_size {minibatch_size} must be divisible by horizon {horizon}")
+    if minibatch_size > horizon * total_agents:
+        raise ValueError(
+            f"minibatch_size {minibatch_size} > total_agents {total_agents} * horizon {horizon}"
+        )
 
 
 def configure(base_args, cli, temp_root):
@@ -83,7 +128,7 @@ def configure(base_args, cli, temp_root):
 
 def run_smoke():
     cli = parse_args()
-    base_args, pufferl_module = load_args(cli.env)
+    base_args = load_config(cli.env)
 
     from pufferlib import _C
 
@@ -93,7 +138,7 @@ def run_smoke():
 
     with tempfile.TemporaryDirectory(prefix="pufferlib-metal-smoke-") as temp_root:
         args = configure(base_args, cli, temp_root)
-        pufferl_module.validate_config(args)
+        validate_config(args)
 
         print(
             "metal_smoke:",
