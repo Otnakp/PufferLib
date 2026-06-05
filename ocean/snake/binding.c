@@ -3,7 +3,7 @@
 #define NUM_ATNS 1
 #define ACT_SIZES {4}
 #define OBS_TYPE CHAR
-#define ACT_TYPE DOUBLE
+#define ACT_TYPE FLOAT
 
 #define Env CSnake
 #include "vecenv.h"

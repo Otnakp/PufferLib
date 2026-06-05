@@ -36,7 +36,7 @@ int demo() {
                 int obs = env.observations[i];
                 net->obs[i*8 + obs] = 1.0f;
             }
-            int* actions = (int*)calloc(env.num_agents, sizeof(int));
+            float* actions = (float*)calloc(env.num_agents, sizeof(float));
             forward_linearlstm(net, net->obs, actions);
             for (int i = 0; i < env.num_agents; i++) {
                 env.actions[i] = actions[i];
