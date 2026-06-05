@@ -118,6 +118,18 @@ resolve_darwin_omp_link() {
     DARWIN_OMP_LINK=(-lomp)
 }
 
+normalize_darwin_omp_install_name() {
+    local output=$1
+    [ "$PLATFORM" = "Darwin" ] || return 0
+
+    for install_name in \
+        /opt/llvm-openmp/lib/libomp.dylib \
+        /opt/homebrew/opt/libomp/lib/libomp.dylib \
+        /usr/local/opt/libomp/lib/libomp.dylib; do
+        install_name_tool -change "$install_name" "@rpath/libomp.dylib" "$output" 2>/dev/null || true
+    done
+}
+
 if [ "$PLATFORM" = "Linux" ]; then
     RAYLIB_NAME='raylib-5.5_linux_amd64'
     OMP_LIB=-lomp5
@@ -304,6 +316,7 @@ if [ "$MODE" = "cpu" ]; then
         )
     fi
     "${LINK_CMD[@]}"
+    normalize_darwin_omp_install_name "$OUTPUT"
     echo "Built: $OUTPUT"
     exit 0
 fi
@@ -349,13 +362,7 @@ if [ "$PLATFORM" = "Darwin" ]; then
         -o "$OUTPUT"
     )
     "${LINK_CMD[@]}"
-
-    for install_name in \
-        /opt/llvm-openmp/lib/libomp.dylib \
-        /opt/homebrew/opt/libomp/lib/libomp.dylib \
-        /usr/local/opt/libomp/lib/libomp.dylib; do
-        install_name_tool -change "$install_name" "@rpath/libomp.dylib" "$OUTPUT" 2>/dev/null || true
-    done
+    normalize_darwin_omp_install_name "$OUTPUT"
 
     echo "Built: $OUTPUT"
     exit 0
