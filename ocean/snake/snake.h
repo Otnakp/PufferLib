@@ -51,6 +51,10 @@ struct CSnake {
     Client* client;
 };
 
+static inline int csnake_rand(CSnake* env, int limit) {
+    return (int)(rand_r(&env->rng) % (unsigned int)limit);
+}
+
 /**
  * Add a snake's log to the main log when the snake's episode ends (dies or hits a wall).
  * This should only be called during termination/truncation conditions for a specific snake.
@@ -143,8 +147,8 @@ void spawn_snake(CSnake* env, int snake_id) {
     int head_r, head_c, tile, grid_idx;
     delete_snake(env, snake_id);
     do {
-        head_r = rand() % (env->height - 1);
-        head_c = rand() % (env->width - 1);
+        head_r = csnake_rand(env, env->height - 1);
+        head_c = csnake_rand(env, env->width - 1);
         grid_idx = head_r*env->width + head_c;
         tile = env->grid[grid_idx];
     } while (tile != EMPTY && tile != CORPSE);
@@ -161,8 +165,8 @@ void spawn_snake(CSnake* env, int snake_id) {
 void spawn_food(CSnake* env) {
     int idx, tile;
     do {
-        int r = rand() % (env->height - 1);
-        int c = rand() % (env->width - 1);
+        int r = csnake_rand(env, env->height - 1);
+        int c = csnake_rand(env, env->width - 1);
         idx = r*env->width + c;
         tile = env->grid[idx];
     } while (tile != EMPTY && tile != CORPSE);
