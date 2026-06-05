@@ -599,6 +599,8 @@ void mtl_destroy() {
   // 1. Drain both command queues — no GPU work in flight.
   g_ctx.stream.end_compute();
   g_ctx.train_stream.end_compute();
+  mtl_ensure_stream_synced((cudaStream_t)&g_ctx.stream);
+  mtl_ensure_stream_synced((cudaStream_t)&g_ctx.train_stream);
 
   // 2. Free lazy-init scratch buffers BEFORE clearing the buffer registry,
   //    while MTLBuffer refs still exist (backing memory released after).
